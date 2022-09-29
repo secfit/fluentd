@@ -2,7 +2,7 @@
   <h3 align="center">Fluentd ModSecurity plugin</h3>
 </div>
 
-Fluentd output (filter) plugin for parsing a ModSecurity audit log
+Fluentd output (filter) plugin for parsing a ModSecurity audit log<br>
 (this project is part from  bitsofinfo/fluentd-modsecurity https://github.com/bitsofinfo/fluentd-modsecurity)
 ## Preparation
 #### define fluentd ruby plugins location
