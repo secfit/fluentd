@@ -24,7 +24,7 @@ during file generation use this shared_key `0658545a2cf5aa3c4b1e081eb77436fe`
 ## set permission (master & &slave)
   ```sh
  [root@master&slave test]# chown td-agent:td-agent -R /etc/td-agent/cert
- [root@master&slave test]# /chmod 700 /etc/td-agent/cert
+ [root@master&slave test]# chmod 700 /etc/td-agent/cert
  [root@master&slave test]# chmod 400 /etc/td-agent/cert/* 
    ```  
    
