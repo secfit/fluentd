@@ -1,0 +1,144 @@
+---
+- hosts: all_server
+  gather_facts: yes
+  become_user: root
+ 
+  vars:
+    package_names: td-agent
+    fluentd_version: 3
+
+    tdagent_plugins:
+      - fluent-plugin-secure-forward
+      - fluent-plugin-genhashvalue-alt
+
+  tasks:
+  - include_tasks: setup-Centos.yml
+    when: ansible_os_family == "RedHat"
+
+  #\__ Package Installation __/#
+  - name: Install "{{ package_names }}".
+    package:
+      name: "{{ package_names }}"
+      state: present
+      update_cache: true
+
+  - name: Enable "{{ package_names }}" during boot
+    service: name=td-agent enabled=yes
+
+  - name: Configure Fluentd.
+    template:
+      src: ../templates/td-agent.conf.j2
+      dest: /etc/td-agent/td-agent.conf
+      owner: root
+      group: root
+      mode: 0644
+      
+  #\__ systemd running permission __/#
+  - name: "Replace td-agent User service"
+    lineinfile:
+      path: /usr/lib/systemd/system/td-agent.service
+      regexp: "User=td-agent"
+      line: "User=root"
+      state: present
+      backup: no
+    
+  - name: "Replace td-agent Group service"
+    lineinfile:
+      path: /usr/lib/systemd/system/td-agent.service
+      regexp: "Group=td-agent"
+      line: "Group=root"
+      state: present
+      backup: no
+      
+  - name: force systemd to reread configs
+    ansible.builtin.systemd:
+     daemon_reload: yes
+       
+  - name: Set permission
+    ansible.builtin.file:
+      path: /var/log/td-agent/
+      owner: "root"
+      group: "td-agent"
+      mode: '0775'
+      recurse: yes
+      
+  - name: creat directory cert
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: directory
+      recurse: yes
+    with_items: 
+       - /opt/fluent/
+       - /etc/td-agent/cert/
+    
+  #\__ Plugin Installation geoip/secure/genhashvalue __/#
+  - name: Determine fluent-gem executable location for td-agent < v4
+    set_fact:
+      fluent_gem_executable: /opt/td-agent/embedded/bin/fluent-gem
+    when: fluentd_version < 4
+  
+  - name: Determine fluent-gem executable location for td-agent v4
+    set_fact:
+      fluent_gem_executable: /opt/td-agent/bin/fluent-gem
+    when: fluentd_version >= 4
+  
+  - name: Ensure Fluentd plugins are installed.
+    gem:
+      name: "{{ item }}"
+      executable: "{{ fluent_gem_executable }}"
+      state: present
+      user_install: false
+    with_items: "{{ tdagent_plugins }}"
+
+  - name: Transfer Cert file.
+    ansible.builtin.copy:
+      src: ../templates/ca_cert.pem
+      dest: /etc/td-agent/cert/ca_cert.pem    
+
+  - name: Set Cert-dir permission
+    ansible.builtin.file:
+      path: /etc/td-agent/cert/
+      owner: "td-agent"
+      group: "td-agent"
+      mode: '0700'
+      recurse: no
+      
+  - name: Set Cert-file permission
+    ansible.builtin.file:
+      path: /etc/td-agent/cert/ca_cert.pem
+      owner: "td-agent"
+      group: "td-agent"
+      mode: '0400'
+    
+  #\__ Plugin Installation Mod_Security __/#
+  - name: Get gem directory
+    shell: ls -d /opt/td-agent/embedded/lib/ruby/gems/2.4.0/gems/fluentd-*/lib/fluent/plugin/
+    register: var_gem_dir
+    
+  - name: Gem Modsecurity Audit File.
+    ansible.builtin.copy:
+      src: ../templates/out_modsecurity-audit-format.rb
+      dest: "{{ var_gem_dir.stdout }}"
+      owner: root
+      group: root
+      mode: 0644
+      
+  - name: fluent-plugin-modsecurity File.
+    ansible.builtin.copy:
+      src: ../templates/fluent-plugin-modsecurity.gemspec
+      dest: /etc/td-agent/
+
+  - name: Replace __sfile__ in out_modsecurity-audit-format.rb
+    ansible.builtin.replace:
+      path: /etc/td-agent/fluent-plugin-modsecurity.gemspec
+      regexp: '__sfile__'
+      replace: '{{ var_gem_dir.stdout }}out_modsecurity-audit-format.rb'
+  
+  - name: Build Modsecurity Plugin
+    shell: /opt/td-agent/embedded/bin/gem build /etc/td-agent/fluent-plugin-modsecurity.gemspec
+    register: build_modsec
+      
+  - name: Restart service Fluen-td
+    ansible.builtin.service:
+      name: td-agent
+      state: restarted
