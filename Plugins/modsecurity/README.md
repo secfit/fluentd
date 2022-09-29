@@ -3,7 +3,7 @@
 </div>
 
 Fluentd output (filter) plugin for parsing a ModSecurity audit log<br>
-(this project is part from  [bitsofinfo/fluentd-modsecurity](https://github.com/bitsofinfo/fluentd-modsecurity)
+(this project is part from  [bitsofinfo/fluentd-modsecurity](https://github.com/bitsofinfo/fluentd-modsecurity))
 ## Preparation
 #### define fluentd ruby plugins location
   ```sh
