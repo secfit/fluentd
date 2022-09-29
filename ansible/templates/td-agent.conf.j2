@@ -1,0 +1,57 @@
+####
+## Source descriptions:
+##
+#---- Mod_Security log ----#
+<source>
+  @type tail
+  tag raw-modsec
+  path /var/log/httpd/modsec_audit.log
+  pos_file /opt/fluent/mod_security.log.pos
+  <parse>
+    @type multiline
+    format_firstline /^--[a-fA-F0-9]{8}-A--$/
+        format1 /(?<message>.*)/
+  </parse>
+</source>
+
+
+####
+## Injection descriptions:
+##
+
+#-- if size value equal -, replace by integer value 0
+<filter **>
+@type record_transformer
+ <record>
+        ServerID __destination_server__
+ </record>
+</filter>
+
+ 
+####
+## Destination descriptions:
+##
+#---- Mod_Security_log ----#
+<match raw-modsec>
+  @type modsecurity-audit-format
+  tag modsec.formatted.__destination_server__
+</match>
+
+<match modsec.formatted.__destination_server__>
+@type copy
+  <store>
+    @type secure_forward
+    shared_key 0658545a2cf5aa3c4b1e081eb77436fe
+    secure yes
+    ca_cert_path /etc/td-agent/cert/ca_cert.pem
+    enable_strict_verification yes
+    <server>
+      host __destination_server__
+      port 24853
+    </server>
+  </store>
+#  <store>
+#    @type file
+#       path /var/log/td-agent/mod_security
+#  </store>
+</match>
