@@ -26,7 +26,7 @@ Fluentd output (filter) plugin for parsing a ModSecurity audit log<br>
   ```sh
  [root@admin test]# sed -i "s;__sfile__;/opt/td-agent/embedded/lib/ruby/gems/2.4.0/gems/fluentd-1.11.5/lib/out_modsecurity-audit-format.rb;g" /etc/td-agent/fluent-plugin-modsecurity.gemspec
    ```
- #### build the gem
+ ## build the gem
   ```sh
  [root@admin test]# /opt/td-agent/embedded/bin/gem build /etc/td-agent/fluent-plugin-modsecurity.gemspec
    ```
