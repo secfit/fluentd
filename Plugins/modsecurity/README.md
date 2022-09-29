@@ -30,3 +30,19 @@ Fluentd output (filter) plugin for parsing a ModSecurity audit log<br>
   ```sh
  [root@admin test]# /opt/td-agent/embedded/bin/gem build /etc/td-agent/fluent-plugin-modsecurity.gemspec
    ```
+## Integrate into td-agent.conf
+  ```sh
+<source>
+  @type tail
+  tag raw-modsec
+  path /var/log/httpd/modsec_audit.log
+  pos_file /opt/fluent/mod_security.log.pos
+  <parse>
+    @type multiline
+    format_firstline /^--[a-fA-F0-9]{8}-A--$/
+        format1 /(?<message>.*)/
+  </parse>
+</source>
+   ```
+
+
